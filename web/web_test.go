@@ -2,6 +2,7 @@
 package web
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -9,6 +10,21 @@ import (
 	"strings"
 	"testing"
 )
+
+type captureCreateRepo struct {
+	job Job
+}
+
+func (r *captureCreateRepo) Get(context.Context, string) (Job, error) { return Job{}, nil }
+func (r *captureCreateRepo) Create(_ context.Context, job *Job) error {
+	r.job = *job
+	return nil
+}
+func (r *captureCreateRepo) Delete(context.Context, string) error { return nil }
+func (r *captureCreateRepo) Select(context.Context, SelectParams) ([]Job, error) {
+	return nil, nil
+}
+func (r *captureCreateRepo) Update(context.Context, *Job) error { return nil }
 
 func newTestServer(t *testing.T, dir string) *Server {
 	t.Helper()
@@ -92,5 +108,31 @@ func TestSecurityHeadersAllowMapResources(t *testing.T) {
 		if !strings.Contains(csp, want) {
 			t.Fatalf("CSP missing %q: %s", want, csp)
 		}
+	}
+}
+
+func TestScrapeDefaultsToAutoModeWithoutTimedFields(t *testing.T) {
+	t.Parallel()
+
+	repo := &captureCreateRepo{}
+	srv, err := New(NewService(repo, t.TempDir()), ":0")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	form := "name=Auto+job&run_mode=auto&keywords=coffee+in+East+London&lang=en&zoom=15&radius=10000&latitude=0&longitude=0"
+	req := httptest.NewRequest(http.MethodPost, "/scrape", strings.NewReader(form))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	srv.scrape(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	if repo.job.Data.RunMode != RunModeAuto || repo.job.Data.MaxTime != 0 || repo.job.Data.Depth != 0 {
+		t.Fatalf("unexpected auto job: %+v", repo.job.Data)
+	}
+	if !repo.job.Data.Email {
+		t.Fatal("auto mode must enable email discovery")
 	}
 }

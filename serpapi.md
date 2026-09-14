@@ -1,5 +1,7 @@
 # SerpApi
 
+> Upstream sponsor reference; not a PinHarbor dependency or feature.
+
 At [SerpApi](https://serpapi.com/?utm_source=google-maps-scraper), we scrape public data not only from Google but from all other top search engines, as well as Home Depot and Walmart product catalogs. You can check the full list of our APIs on the left panel under the following link:
 
 <https://serpapi.com/search-api>

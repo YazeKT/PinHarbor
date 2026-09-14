@@ -21,12 +21,13 @@ type EmailExtractJob struct {
 	Entry                   *Entry
 	ExitMonitor             exiter.Exiter
 	WriterManagedCompletion bool
+	FollowupDepth           int
 }
 
 func NewEmailJob(parentID string, entry *Entry, opts ...EmailExtractJobOptions) *EmailExtractJob {
 	const (
 		defaultPrio       = scrapemate.PriorityHigh
-		defaultMaxRetries = 0
+		defaultMaxRetries = 2
 	)
 
 	job := EmailExtractJob{
@@ -61,14 +62,22 @@ func WithEmailJobWriterManagedCompletion() EmailExtractJobOptions {
 	}
 }
 
+func withEmailJobURL(targetURL string, depth int) EmailExtractJobOptions {
+	return func(j *EmailExtractJob) {
+		j.URL = targetURL
+		j.FollowupDepth = depth
+	}
+}
+
 func (j *EmailExtractJob) Process(ctx context.Context, resp *scrapemate.Response) (any, []scrapemate.IJob, error) {
+	complete := true
 	defer func() {
 		resp.Document = nil
 		resp.Body = nil
 	}()
 
 	defer func() {
-		if j.ExitMonitor != nil && !j.WriterManagedCompletion {
+		if complete && j.ExitMonitor != nil && !j.WriterManagedCompletion {
 			j.ExitMonitor.IncrPlacesCompleted(1)
 		}
 	}()
@@ -91,10 +100,61 @@ func (j *EmailExtractJob) Process(ctx context.Context, resp *scrapemate.Response
 	if len(emails) == 0 {
 		emails = regexEmailExtractor(resp.Body)
 	}
+	if len(emails) == 0 && j.FollowupDepth == 0 {
+		if followupURL := findEmailFollowupURL(resp.URL, doc); followupURL != "" {
+			opts := []EmailExtractJobOptions{withEmailJobURL(followupURL, 1)}
+			if j.ExitMonitor != nil {
+				opts = append(opts, WithEmailJobExitMonitor(j.ExitMonitor))
+			}
+			if j.WriterManagedCompletion {
+				opts = append(opts, WithEmailJobWriterManagedCompletion())
+			}
+			complete = false
+
+			return nil, []scrapemate.IJob{NewEmailJob(j.ParentID, j.Entry, opts...)}, nil
+		}
+	}
 
 	j.Entry.Emails = emails
 
 	return j.Entry, nil, nil
+}
+
+func findEmailFollowupURL(rawBaseURL string, doc *goquery.Document) string {
+	baseURL, err := url.Parse(rawBaseURL)
+	if err != nil {
+		return ""
+	}
+
+	var best string
+	doc.Find("a[href]").EachWithBreak(func(_ int, selection *goquery.Selection) bool {
+		href, ok := selection.Attr("href")
+		if !ok {
+			return true
+		}
+
+		label := strings.ToLower(strings.TrimSpace(selection.Text()) + " " + href)
+		if !strings.Contains(label, "contact") && !strings.Contains(label, "get-in-touch") &&
+			!strings.Contains(label, "about") && !strings.Contains(label, "team") {
+			return true
+		}
+
+		candidate, err := url.Parse(href)
+		if err != nil || candidate.Scheme == "mailto" || candidate.Scheme == "tel" {
+			return true
+		}
+
+		candidate = baseURL.ResolveReference(candidate)
+		if candidate.Host != baseURL.Host {
+			return true
+		}
+
+		best = candidate.String()
+
+		return false
+	})
+
+	return best
 }
 
 func (j *EmailExtractJob) ProcessOnFetchError() bool {

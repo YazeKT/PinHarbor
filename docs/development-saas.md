@@ -1,3 +1,7 @@
+# Upstream SaaS development reference
+
+> This is not part of the supported local PinHarbor build. Use it only when deliberately working on the upstream SaaS edition.
+
 ### Create a local VM to test provisioning
 
 Install multipass:

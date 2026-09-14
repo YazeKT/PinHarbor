@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"slices"
 	"testing"
 
 	"github.com/PuerkitoBio/goquery"
@@ -252,17 +251,37 @@ func Test_EntryFromJSONMergesDuplicateAboutOptions(t *testing.T) {
 	require.Equal(t, []string{"American Express", "Diners Club", "Mastercard", "VISA"}, creditCards.Values)
 }
 
-func Test_EntryCSVIncludesCreditCardsAccepted(t *testing.T) {
+func Test_EntryCSVUsesConfiguredExportFields(t *testing.T) {
 	entry := gmaps.Entry{
-		CreditCardsAccepted: []string{"American Express", "Mastercard", "VISA"},
+		Title:           "Example Business",
+		Category:        "Security service",
+		Categories:      []string{"Security service", "Fire protection service"},
+		Address:         "1 Example Street",
+		Phone:           "+1 555 0100",
+		WebSite:         "https://example.com",
+		Link:            "https://maps.google.com/example",
+		Latitude:        -33.1,
+		Longtitude:      27.2,
+		ReviewRating:    4.6,
+		ReviewCount:     42,
+		Status:          "Open",
+		Description:     "Example description",
+		PlaceID:         "place-123",
+		CompleteAddress: gmaps.Address{City: "Example City"},
+		About:           []gmaps.About{{ID: "amenities", Name: "Amenities"}},
+		Emails:          []string{"hello@example.com"},
 	}
 
-	require.Contains(t, entry.CsvHeaders(), "credit_cards_accepted")
-	require.Equal(t, len(entry.CsvHeaders()), len(entry.CsvRow()))
-	require.Equal(t,
-		"American Express, Mastercard, VISA",
-		entry.CsvRow()[slices.Index(entry.CsvHeaders(), "credit_cards_accepted")],
-	)
+	require.Equal(t, []string{
+		"title", "category", "categories", "address", "complete_address", "phone", "website", "emails", "link",
+		"latitude", "longitude", "review_rating", "review_count", "status", "description", "place_id", "about",
+	}, entry.CsvHeaders())
+	require.Equal(t, []string{
+		"Example Business", "Security service", "Security service, Fire protection service", "1 Example Street",
+		`{"borough":"","street":"","city":"Example City","postal_code":"","state":"","country":""}`, "+1 555 0100",
+		"https://example.com", "hello@example.com", "https://maps.google.com/example", "-33.1", "27.2", "4.6", "42", "Open",
+		"Example description", "place-123", `[{"id":"amenities","name":"Amenities","options":null}]`,
+	}, entry.CsvRow())
 }
 
 func Test_EntryMarshalEmitsBothLongitudeKeys(t *testing.T) {

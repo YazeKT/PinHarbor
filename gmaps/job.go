@@ -327,7 +327,9 @@ func scroll(ctx context.Context,
 		maxWait2 = 2000
 	)
 
-	for i := 0; i < maxDepth; i++ {
+	// A non-positive depth is completion-driven Auto Mode: keep scrolling until
+	// the result feed stops growing. Timed presets retain their explicit cap.
+	for i := 0; maxDepth <= 0 || i < maxDepth; i++ {
 		cnt++
 		waitTime2 := timeout * cnt
 

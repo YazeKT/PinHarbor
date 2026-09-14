@@ -1,8 +1,47 @@
-cache/
-vendor
-bin
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+
+# PinHarbor runtime data (never publish operator data)
 webdata/
-examples/examples-api/map-outputs
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.csv
+!example-queries.txt
+
+# Build and test output
+bin/
+dist/
+release/
+coverage.out
+*.coverprofile
+*.test
+*.exe
+*.log
+tmp/
+temp/
+
+# Browser/runtime caches
+cache/
+playwright-report/
+test-results/
+
+# Existing upstream generated output
+vendor/
+gmaps-output/
+examples/examples-api/map-outputs/
 examples/examples-api/**/__pycache__/
 examples/examples-api/**/*.py[cod]
-gmaps-output
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*~

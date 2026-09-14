@@ -1,3 +1,5 @@
+> Upstream sponsor reference; not a PinHarbor dependency or feature.
+
 **G Maps Extractor**  
 A no-code Google Maps scraper that pulls business leads from Google Maps in one click.
 

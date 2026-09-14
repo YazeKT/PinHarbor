@@ -15,6 +15,8 @@ metadata:
 allowed-tools: Bash(node:*) Bash(bash:*) Bash(docker:*) Read Write
 ---
 
+> Legacy upstream automation skill. PinHarbor's supported Windows workflow is `Run PinHarbor.bat` and does not use Docker or WSL. This skill remains only as reference for the original container-based collector.
+
 # Google Maps Scraper
 
 Turn a natural-language lead request into a validated local Google Maps crawl, monitor it, and help the user work with the results.

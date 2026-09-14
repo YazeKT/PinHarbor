@@ -3,10 +3,56 @@ package web
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
+
+type cancelAwareRepo struct {
+	cancelled <-chan struct{}
+	deleted   bool
+}
+
+type stopRepo struct {
+	job       Job
+	cancelled <-chan struct{}
+}
+
+func (r *stopRepo) Get(context.Context, string) (Job, error) { return r.job, nil }
+func (r *stopRepo) Create(context.Context, *Job) error       { return nil }
+func (r *stopRepo) Delete(context.Context, string) error     { return nil }
+func (r *stopRepo) Select(context.Context, SelectParams) ([]Job, error) {
+	return []Job{r.job}, nil
+}
+func (r *stopRepo) Update(_ context.Context, job *Job) error {
+	select {
+	case <-r.cancelled:
+		r.job = *job
+		return nil
+	default:
+		return errors.New("job updated before its worker was cancelled")
+	}
+}
+
+func (r *cancelAwareRepo) Get(context.Context, string) (Job, error) {
+	return Job{}, errors.New("not implemented")
+}
+func (r *cancelAwareRepo) Create(context.Context, *Job) error { return errors.New("not implemented") }
+func (r *cancelAwareRepo) Select(context.Context, SelectParams) ([]Job, error) {
+	return nil, errors.New("not implemented")
+}
+func (r *cancelAwareRepo) Update(context.Context, *Job) error { return errors.New("not implemented") }
+func (r *cancelAwareRepo) Delete(context.Context, string) error {
+	select {
+	case <-r.cancelled:
+		r.deleted = true
+		return nil
+	default:
+		return errors.New("job deleted before its worker was cancelled")
+	}
+}
 
 func writeCSV(t *testing.T, dir, id, content string) {
 	t.Helper()
@@ -109,5 +155,59 @@ func TestGetPlacesRejectsTraversal(t *testing.T) {
 
 	if _, err := svc.GetPlaces(context.Background(), "../etc/passwd"); err == nil {
 		t.Fatal("expected error for path traversal")
+	}
+}
+
+func TestDeleteCancelsAndWaitsForRunningJob(t *testing.T) {
+	cancelled := make(chan struct{})
+	repo := &cancelAwareRepo{cancelled: cancelled}
+	svc := NewService(repo, t.TempDir())
+	finish := svc.RegisterRunning("job-live", func() { close(cancelled) })
+
+	go func() {
+		<-cancelled
+		time.Sleep(25 * time.Millisecond)
+		finish()
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := svc.Delete(ctx, "job-live"); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+	if !repo.deleted {
+		t.Fatal("expected repository row to be deleted after cancellation")
+	}
+}
+
+func TestStopCancelsWorkerAndPreservesPartialCSV(t *testing.T) {
+	t.Parallel()
+
+	cancelled := make(chan struct{})
+	repo := &stopRepo{
+		job:       Job{ID: "job-live", Status: StatusWorking},
+		cancelled: cancelled,
+	}
+	dir := t.TempDir()
+	svc := NewService(repo, dir)
+	writeCSV(t, dir, "job-live", "title\nSaved result\n")
+	finish := svc.RegisterRunning("job-live", func() { close(cancelled) })
+
+	go func() {
+		<-cancelled
+		time.Sleep(25 * time.Millisecond)
+		finish()
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := svc.Stop(ctx, "job-live"); err != nil {
+		t.Fatalf("Stop: %v", err)
+	}
+	if repo.job.Status != StatusStopped {
+		t.Fatalf("status = %q, want stopped", repo.job.Status)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "job-live.csv")); err != nil {
+		t.Fatalf("partial CSV was not preserved: %v", err)
 	}
 }

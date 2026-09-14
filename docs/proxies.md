@@ -1,5 +1,7 @@
 # Proxy Sponsors
 
+> PinHarbor note: proxy URLs can be entered in the local **Proxies** panel. This upstream sponsor/reference page is optional and is not required for the default Windows workflow.
+
 Google Maps scraping can trigger rate limits or blocking, especially with larger jobs or higher concurrency. Proxies can help, but they are not a guarantee. Proxy quality, geography, concurrency, query volume, and Google behavior all affect reliability.
 
 This page lists current proxy sponsors and supporters of this project. Using these links helps fund maintenance.

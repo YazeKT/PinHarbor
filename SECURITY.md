@@ -1,21 +1,43 @@
-# Security Policy
+# Security policy
 
-## Reporting a Vulnerability
+## Supported versions
 
-If you believe you have found a security vulnerability in this project, please
-report it privately.
+PinHarbor is currently maintained on the `main` branch. Security fixes are not
+backported to older snapshots unless a release note explicitly says otherwise.
 
-Please do not open a public GitHub issue for security reports.
+## Local security model
 
-Use GitHub's private vulnerability reporting feature for this repository, if
-available. If that is not available, contact the maintainer privately through
-the contact details listed on the project owner's GitHub profile.
+PinHarbor is intended for one operator on a trusted computer.
 
-Please include as much detail as possible:
+- The local server listens on port `8080` and does not provide authentication.
+- Do not port-forward, tunnel, or publicly expose the server.
+- Job metadata and results live under `webdata/`.
+- Proxy URLs may contain credentials and must not be committed or shared.
+- `.env`, databases, CSV results, browser profiles, and logs must stay out of
+  source control.
+- Browser code has no direct filesystem access.
+- Job identifiers are validated before result files are opened or removed.
+- Removing an active job first cancels and waits for its worker.
 
-- Affected version or commit
-- Steps to reproduce
-- Expected impact
-- Any suggested fix, if available
+## External requests
 
-We will review the report and coordinate disclosure once a fix is available.
+Collection contacts Google Maps. Email discovery also visits public business
+websites. Proxy use sends traffic and credentials to the configured provider.
+
+## Report a vulnerability
+
+Do not open a public issue for a security vulnerability or attach private CSV
+data, search terms, proxy credentials, environment files, or browser profiles.
+
+Use GitHub's **Report a vulnerability** option in the Security tab to send the
+maintainer a private report. Include:
+
+- the affected commit or version;
+- clear reproduction steps;
+- the expected security impact;
+- a minimal proof of concept with secrets and personal data removed;
+- any mitigation or fix you have already identified.
+
+For a vulnerability that also affects the unchanged upstream engine, report it
+to the upstream project as well. Please allow reasonable time for investigation
+and coordinated disclosure.

@@ -39,8 +39,10 @@ func New(svc *Service, addr string) (*Server, error) {
 			ReadHeaderTimeout: 10 * time.Second,
 			ReadTimeout:       60 * time.Second,
 			WriteTimeout:      60 * time.Second,
-			IdleTimeout:       120 * time.Second,
-			MaxHeaderBytes:    1 << 20,
+			// Keep localhost available indefinitely. Per-request read/write
+			// limits remain, but an idle browser never stops the service.
+			IdleTimeout:    0,
+			MaxHeaderBytes: 1 << 20,
 		},
 	}
 
@@ -64,7 +66,13 @@ func New(svc *Service, addr string) (*Server, error) {
 
 		ans.delete(w, r)
 	})
+	mux.HandleFunc("/stop", func(w http.ResponseWriter, r *http.Request) {
+		r = requestWithID(r)
+
+		ans.stop(w, r)
+	})
 	mux.HandleFunc("/jobs", ans.getJobs)
+	mux.HandleFunc("/health", ans.health)
 	mux.HandleFunc("/view", func(w http.ResponseWriter, r *http.Request) {
 		r = requestWithID(r)
 
@@ -124,6 +132,20 @@ func New(svc *Service, addr string) (*Server, error) {
 
 		ans.download(w, r)
 	})
+	mux.HandleFunc("/api/v1/jobs/{id}/stop", func(w http.ResponseWriter, r *http.Request) {
+		r = requestWithID(r)
+
+		if r.Method != http.MethodPost {
+			ans := apiError{
+				Code:    http.StatusMethodNotAllowed,
+				Message: "Method not allowed",
+			}
+			renderJSON(w, http.StatusMethodNotAllowed, ans)
+			return
+		}
+
+		ans.apiStopJob(w, r)
+	})
 
 	handler := securityHeaders(mux)
 	ans.srv.Handler = handler
@@ -146,6 +168,14 @@ func New(svc *Service, addr string) (*Server, error) {
 	}
 
 	return &ans, nil
+}
+
+func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
+	renderJSON(w, http.StatusOK, map[string]string{
+		"status": "ok",
+		"app":    "PinHarbor",
+		"time":   time.Now().Format(time.RFC3339),
+	})
 }
 
 func (s *Server) Start(ctx context.Context) error {
@@ -174,6 +204,7 @@ func (s *Server) Start(ctx context.Context) error {
 
 type formData struct {
 	Name     string
+	RunMode  string
 	MaxTime  string
 	Keywords []string
 	Language string
@@ -237,7 +268,8 @@ func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 
 	data := formData{
 		Name:     "",
-		MaxTime:  "10m",
+		RunMode:  RunModeAuto,
+		MaxTime:  "1h",
 		Keywords: []string{},
 		Language: "en",
 		Zoom:     15,
@@ -245,8 +277,8 @@ func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 		Radius:   10000,
 		Lat:      "0",
 		Lon:      "0",
-		Depth:    10,
-		Email:    false,
+		Depth:    100,
+		Email:    true,
 	}
 
 	_ = tmpl.Execute(w, data)
@@ -271,25 +303,29 @@ func (s *Server) scrape(w http.ResponseWriter, r *http.Request) {
 		Name:   r.Form.Get("name"),
 		Date:   time.Now().UTC(),
 		Status: StatusPending,
-		Data:   JobData{},
+		Data:   JobData{RunMode: r.Form.Get("run_mode")},
 	}
 
-	maxTimeStr := r.Form.Get("maxtime")
-
-	maxTime, err := time.ParseDuration(maxTimeStr)
-	if err != nil {
-		http.Error(w, "invalid max time", http.StatusUnprocessableEntity)
-
-		return
+	if newJob.Data.RunMode == "" {
+		newJob.Data.RunMode = RunModeAuto
 	}
 
-	if maxTime < time.Minute*3 {
-		http.Error(w, "max time must be more than 3m", http.StatusUnprocessableEntity)
+	if newJob.Data.RunMode == RunModeCustom {
+		maxTime, parseErr := time.ParseDuration(r.Form.Get("maxtime"))
+		if parseErr != nil {
+			http.Error(w, "invalid max time", http.StatusUnprocessableEntity)
 
-		return
+			return
+		}
+
+		if maxTime < time.Minute*3 {
+			http.Error(w, "max time must be at least 3m", http.StatusUnprocessableEntity)
+
+			return
+		}
+
+		newJob.Data.MaxTime = maxTime
 	}
-
-	newJob.Data.MaxTime = maxTime
 
 	keywordsStr, ok := r.Form["keywords"]
 	if !ok {
@@ -331,14 +367,17 @@ func (s *Server) scrape(w http.ResponseWriter, r *http.Request) {
 	newJob.Data.Lat = r.Form.Get("latitude")
 	newJob.Data.Lon = r.Form.Get("longitude")
 
-	newJob.Data.Depth, err = strconv.Atoi(r.Form.Get("depth"))
-	if err != nil {
-		http.Error(w, "invalid depth", http.StatusUnprocessableEntity)
+	if depthValue := r.Form.Get("depth"); depthValue != "" {
+		newJob.Data.Depth, err = strconv.Atoi(depthValue)
+		if err != nil {
+			http.Error(w, "invalid depth", http.StatusUnprocessableEntity)
 
-		return
+			return
+		}
 	}
 
 	newJob.Data.Email = r.Form.Get("email") == "on"
+	newJob.Data.ExtraReviews = r.Form.Get("extra_reviews") == "on"
 
 	proxies := strings.Split(r.Form.Get("proxies"), "\n")
 	if len(proxies) > 0 {
@@ -350,6 +389,12 @@ func (s *Server) scrape(w http.ResponseWriter, r *http.Request) {
 
 			newJob.Data.Proxies = append(newJob.Data.Proxies, p)
 		}
+	}
+
+	if err := ApplyRunPreset(&newJob.Data); err != nil {
+		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+
+		return
 	}
 
 	err = newJob.Validate()
@@ -373,7 +418,7 @@ func (s *Server) scrape(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = tmpl.Execute(w, newJob)
+	_ = tmpl.Execute(w, s.svc.jobView(newJob))
 }
 
 func (s *Server) getJobs(w http.ResponseWriter, r *http.Request) {
@@ -396,7 +441,7 @@ func (s *Server) getJobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = tmpl.Execute(w, jobs)
+	_ = tmpl.Execute(w, s.svc.jobViews(jobs))
 }
 
 func (s *Server) download(w http.ResponseWriter, r *http.Request) {
@@ -463,6 +508,43 @@ func (s *Server) delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (s *Server) stop(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	id, ok := getIDFromRequest(r)
+	if !ok {
+		http.Error(w, "Invalid ID", http.StatusUnprocessableEntity)
+
+		return
+	}
+
+	if err := s.svc.Stop(r.Context(), id.String()); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	job, err := s.svc.Get(r.Context(), id.String())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	tmpl, ok := s.tmpl["static/templates/job_row.html"]
+	if !ok {
+		http.Error(w, "missing tpl", http.StatusInternalServerError)
+
+		return
+	}
+
+	_ = tmpl.Execute(w, s.svc.jobView(job))
+}
+
 type apiError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
@@ -513,6 +595,19 @@ func (s *Server) apiScrape(w http.ResponseWriter, r *http.Request) {
 
 	// convert to seconds
 	newJob.Data.MaxTime *= time.Second
+	if newJob.Data.RunMode == "" {
+		if newJob.Data.MaxTime > 0 {
+			newJob.Data.RunMode = RunModeCustom
+		} else {
+			newJob.Data.RunMode = RunModeAuto
+		}
+	}
+	if err := ApplyRunPreset(&newJob.Data); err != nil {
+		ans := apiError{Code: http.StatusUnprocessableEntity, Message: err.Error()}
+		renderJSON(w, http.StatusUnprocessableEntity, ans)
+
+		return
+	}
 
 	err = newJob.Validate()
 	if err != nil {
@@ -665,6 +760,36 @@ func (s *Server) apiDeleteJob(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (s *Server) apiStopJob(w http.ResponseWriter, r *http.Request) {
+	id, ok := getIDFromRequest(r)
+	if !ok {
+		renderJSON(w, http.StatusUnprocessableEntity, apiError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "Invalid ID",
+		})
+		return
+	}
+
+	if err := s.svc.Stop(r.Context(), id.String()); err != nil {
+		renderJSON(w, http.StatusInternalServerError, apiError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	job, err := s.svc.Get(r.Context(), id.String())
+	if err != nil {
+		renderJSON(w, http.StatusInternalServerError, apiError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	renderJSON(w, http.StatusOK, job)
+}
+
 func renderJSON(w http.ResponseWriter, code int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
@@ -679,10 +804,10 @@ func formatDate(t time.Time) string {
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("X-XSS-Protection", "1; mode=block")
 		w.Header().Set("Content-Security-Policy",
 			"default-src 'self'; "+
+				"frame-ancestors 'self' http://127.0.0.1:4173 http://localhost:4173; "+
 				"script-src 'self' cdn.redoc.ly cdnjs.cloudflare.com 'unsafe-inline' 'unsafe-eval'; "+
 				"worker-src 'self' blob:; "+
 				"style-src 'self' 'unsafe-inline' fonts.googleapis.com cdnjs.cloudflare.com; "+

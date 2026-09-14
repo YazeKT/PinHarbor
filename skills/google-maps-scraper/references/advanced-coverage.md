@@ -29,3 +29,6 @@ Never use depth above 10 unless the user explicitly requests it. Increase concur
 ## Available fields
 
 Common fields include `title`, `category`, `address`, `open_hours`, `website`, `phone`, `review_count`, `review_rating`, `latitude`, `longitude`, `status`, `description`, `price_range`, `place_id`, `images`, `owner`, `complete_address`, `user_reviews`, `user_reviews_extended`, and `emails`.
+# Legacy upstream advanced coverage
+
+> These container examples are retained for the upstream automation skill. PinHarbor's supported interface uses Auto Mode through `Run PinHarbor.bat`.

@@ -1,5 +1,7 @@
 # Migration Plan: Merge maps-scraper-pro into google-maps-scraper
 
+> Historical upstream planning document. It is not the architecture or roadmap for the current local PinHarbor build.
+
 ## Context
 `maps-scraper-pro` is a SaaS layer built on top of `google-maps-scraper`. It adds a REST API,
 admin dashboard, River job queue, cloud provisioning, and multi-user auth. Both repos are open

@@ -1,24 +1,62 @@
 {{range .}}
-<tr>
-    <td>{{.ID}}</td>
-    <td>{{.Name}}</td>
-    <td>{{.Date}}</td>
+<tr id="job-{{.ID}}" class="job-row">
     <td>
-        <span class="status-indicator status-{{.Status}}">{{.Status}}</span>
-    </td>
-    <td>
-        {{ if eq .Status "ok" }}
-            <button type="button" class="button view-button"
-                    hx-get="/view?id={{.ID}}"
-                    hx-target="#map-modal-container"
-                    hx-swap="innerHTML">View</button>
-            <a href="/download?id={{.ID}}" download class="button download-button">Download</a>
-        {{ end }}
-        <button hx-delete="/delete?id={{.ID}}" 
-                hx-target="closest tr"
-                hx-swap="outerHTML"
-                hx-confirm="Are you sure you want to delete this job?"
-                class="delete-button">Delete</button>
+        <article class="job-card">
+            <div class="job-topline">
+                <div class="job-identity">
+                    <div class="job-title-line">
+                        <h3>{{if .Name}}{{.Name}}{{else}}Untitled scrape{{end}}</h3>
+                        <span class="status-indicator status-{{.Status}}">{{if eq .Status "working"}}<span class="live-dot" aria-hidden="true"></span>{{end}}{{.Status}}</span>
+                    </div>
+                    <p><code>{{.ShortID}}</code><span aria-hidden="true">·</span><span class="mode-label">{{.RunModeLabel}}</span><span aria-hidden="true">·</span> Started <time>{{.CreatedLocal}}</time> local</p>
+                </div>
+                <div class="job-actions">
+                    {{if or (eq .Status "pending") (eq .Status "working")}}
+                        <button type="button" hx-post="/stop?id={{.ID}}" hx-target="closest tr" hx-swap="outerHTML" hx-confirm="Stop this collection? Saved rows will be kept." class="button stop-button">Stop &amp; keep partial</button>
+                    {{end}}
+                    {{if gt .ResultCount 0}}
+                        <a href="/download?id={{.ID}}" download class="button download-button">Download{{if ne .Status "ok"}} partial{{end}}</a>
+                    {{end}}
+                    {{if eq .Status "ok"}}
+                        <button type="button" class="button view-button" hx-get="/view?id={{.ID}}" hx-target="#map-modal-container" hx-swap="innerHTML">View</button>
+                    {{end}}
+                    <button hx-delete="/delete?id={{.ID}}" hx-target="closest tr" hx-swap="outerHTML" hx-confirm="Are you sure you want to delete this job?" class="delete-button">Delete</button>
+                </div>
+            </div>
+            <div class="live-metrics" aria-label="Live job metrics">
+                <div class="metric"><span>Results pulled</span><strong>{{.ResultCount}}</strong></div>
+                <div class="metric"><span>Scraping speed</span><strong>{{.Speed}}</strong></div>
+                <div class="metric"><span>Elapsed</span><strong>{{.Elapsed}}</strong></div>
+                <div class="metric"><span>Estimated finish</span><strong>{{.ETA}}</strong></div>
+            </div>
+            <div class="progress-block">
+                <div class="progress-copy"><span>{{.ProgressLabel}}</span><strong>{{.ProgressPercent}}%</strong></div>
+                <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{.ProgressPercent}}" aria-label="Job completion">
+                    <span style="width: {{.ProgressPercent}}%"></span>
+                </div>
+                <div class="work-breakdown"><span>{{.SearchProgress}}</span><span>{{.PlaceProgress}}</span><span>Updated {{.LastRefreshLocal}}</span></div>
+            </div>
+            {{if eq .Status "working"}}
+            <section class="live-pulls" aria-label="Latest live pulls">
+                <div class="live-pulls-heading"><strong><span class="live-dot" aria-hidden="true"></span>Live pulls</strong><span>Newest saved results</span></div>
+                {{if .LatestResults}}
+                <div class="live-result-list">
+                    {{range .LatestResults}}
+                    <div class="live-result">
+                        <strong>{{if .Title}}{{.Title}}{{else}}Untitled result{{end}}</strong>
+                        {{if .Address}}<span>{{.Address}}</span>{{end}}
+                        <small>{{if .Phone}}{{.Phone}}{{end}}{{if and .Phone .Emails}} · {{end}}{{if .Emails}}{{.Emails}}{{end}}</small>
+                    </div>
+                    {{end}}
+                </div>
+                {{else}}
+                <p class="waiting-copy">The scraper is working. New businesses will appear here as soon as they are saved.</p>
+                {{end}}
+            </section>
+            {{end}}
+        </article>
     </td>
 </tr>
+{{else}}
+<tr class="empty-row"><td><p>No collections yet. Add searches on the left and launch the first run.</p></td></tr>
 {{end}}

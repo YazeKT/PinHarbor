@@ -1,5 +1,7 @@
 # Scrap.io: Google Maps Scraping Premium
 
+> Upstream sponsor reference; not a PinHarbor dependency or feature.
+
 [![No time for code? Extract all Google Maps listings at country-scale in 2 clicks without keywords or limits](img/premium_scrap_io.png)](https://scrap.io?utm_medium=ads&utm_source=github_gosom_gmap_scraper)
 
 ## 🚀 Why Choose Scrap.io?

@@ -1,5 +1,7 @@
 # Google Maps Scraper - SaaS Edition
 
+> Upstream reference only. PinHarbor is a local single-operator build and does not use this Docker/PostgreSQL SaaS deployment.
+
 The SaaS edition is an optional self-hosted Google Maps scraping platform for teams and automation workflows. It adds REST API access, API keys, admin UI, job queue, workers, and cloud deployment on top of the scraper.
 
 ## When to Use It

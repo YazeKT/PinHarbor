@@ -1,5 +1,7 @@
 # Webshare.io: The Most Affordable Premium Proxies on the Market
 
+> Upstream sponsor reference; not a PinHarbor dependency or feature.
+
 <p align="center">
   <a href="https://www.webshare.io/?referral_code=0q3l81eet8mp">
     <img src="./img/webshare-logo.png" alt="Webshare logo" width="140">

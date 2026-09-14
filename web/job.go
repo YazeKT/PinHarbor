@@ -13,6 +13,7 @@ const (
 	StatusWorking = "working"
 	StatusOK      = "ok"
 	StatusFailed  = "failed"
+	StatusStopped = "stopped"
 )
 
 type SelectParams struct {
@@ -29,11 +30,12 @@ type JobRepository interface {
 }
 
 type Job struct {
-	ID     string
-	Name   string
-	Date   time.Time
-	Status string
-	Data   JobData
+	ID        string
+	Name      string
+	Date      time.Time
+	UpdatedAt time.Time
+	Status    string
+	Data      JobData
 }
 
 func (j *Job) Validate() error {
@@ -62,6 +64,7 @@ func (j *Job) Validate() error {
 
 type JobData struct {
 	Keywords     []string      `json:"keywords"`
+	RunMode      string        `json:"run_mode"`
 	Lang         string        `json:"lang"`
 	Zoom         int           `json:"zoom"`
 	Lat          string        `json:"lat"`
@@ -88,11 +91,17 @@ func (d *JobData) Validate() error {
 		return errors.New("invalid lang")
 	}
 
-	if d.Depth == 0 {
+	d.RunMode = EffectiveRunMode(*d)
+
+	if !IsRunMode(d.RunMode) {
+		return errors.New("invalid run mode")
+	}
+
+	if d.RunMode != RunModeAuto && d.Depth == 0 {
 		return errors.New("missing depth")
 	}
 
-	if d.MaxTime == 0 {
+	if d.RunMode != RunModeAuto && d.MaxTime == 0 {
 		return errors.New("missing max time")
 	}
 

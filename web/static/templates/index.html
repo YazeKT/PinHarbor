@@ -1,160 +1,77 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Maps Scraper</title>
+    <meta name="theme-color" content="#07131b">
+    <title>PinHarbor · Local lead discovery</title>
+    <link rel="icon" type="image/png" href="/static/img/pinharbor-logo.png">
     <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/monitor.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/htmx/1.9.6/htmx.min.js"></script>
+    <script defer src="/static/js/app.js"></script>
 </head>
 <body>
     <div class="app-container">
-        <header>
-            <h1>Google Maps Scraper</h1>
-            <nav>
-                <a href="/api/docs" target="_blank" rel="noopener noreferrer">API Documentation</a>
+        <header class="app-header">
+            <a class="brand" href="/" aria-label="PinHarbor home">
+                <img class="brand-logo" src="/static/img/pinharbor-logo.png" alt="">
+                <span class="brand-copy"><strong>PinHarbor</strong><small>Local lead discovery</small></span>
+            </a>
+            <nav aria-label="Utility navigation">
+                <span class="local-badge"><span class="live-dot" aria-hidden="true"></span>Local</span>
+                <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to light mode" aria-pressed="true"><span aria-hidden="true">☾</span><span class="theme-label">Dark</span></button>
+                <a href="/api/docs" target="_blank" rel="noopener noreferrer">API</a>
             </nav>
-            <div class="github-section">
-                <p>If you find this tool useful, please consider starring our repository: </p>
-                <a href="https://github.com/gosom/google-maps-scraper" class="github-button">
-                <svg height="16" width="16" viewBox="0 0 16 16">
-                    <path fill="currentColor" d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.75.75 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25z"/>
-                  </svg>
-                  Star on GitHub
-                </a>
-            </div>
-            <div id="sponsor-section" class="sponsor-section">
-    <button class="sponsor-close" onclick="hideSponsor()">
-        ×
-    </button>
-    <p class="sponsor-text">Support the ongoing maintenance and development of this project by becoming a sponsor. Your contribution helps ensure the tool's continued improvement and reliability.</p>
-    <a href="https://github.com/sponsors/gosom" class="sponsor-button" target="_blank" rel="noopener noreferrer">
-        <svg height="16" width="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-            <path fill-rule="evenodd" clip-rule="evenodd" d="M4.25 2.5C4.25 1.83696 4.67143 1.25 5.25 1.25C5.82857 1.25 6.25 1.83696 6.25 2.5C6.25 3.16304 5.82857 3.75 5.25 3.75C4.67143 3.75 4.25 3.16304 4.25 2.5ZM2.5 3.75C1.92143 3.75 1.5 3.16304 1.5 2.5C1.5 1.83696 1.92143 1.25 2.5 1.25C3.07857 1.25 3.5 1.83696 3.5 2.5C3.5 3.16304 3.07857 3.75 2.5 3.75ZM8 1.25C7.42143 1.25 7 1.83696 7 2.5C7 3.16304 7.42143 3.75 8 3.75C8.57857 3.75 9 3.16304 9 2.5C9 1.83696 8.57857 1.25 8 1.25ZM10.75 2.5C10.75 1.83696 11.1714 1.25 11.75 1.25C12.3286 1.25 12.75 1.83696 12.75 2.5C12.75 3.16304 12.3286 3.75 11.75 3.75C11.1714 3.75 10.75 3.16304 10.75 2.5ZM14.5 1.25C13.9214 1.25 13.5 1.83696 13.5 2.5C13.5 3.16304 13.9214 3.75 14.5 3.75C15.0786 3.75 15.5 3.16304 15.5 2.5C15.5 1.83696 15.0786 1.25 14.5 1.25ZM1.25 5.25C1.25 4.67143 1.83696 4.25 2.5 4.25C3.16304 4.25 3.75 4.67143 3.75 5.25C3.75 5.82857 3.16304 6.25 2.5 6.25C1.83696 6.25 1.25 5.82857 1.25 5.25ZM5.25 4.25C4.67143 4.25 4.25 4.67143 4.25 5.25C4.25 5.82857 4.67143 6.25 5.25 6.25C5.82857 6.25 6.25 5.82857 6.25 5.25C6.25 4.67143 5.82857 4.25 5.25 4.25ZM7 5.25C7 4.67143 7.42143 4.25 8 4.25C8.57857 4.25 9 4.67143 9 5.25C9 5.82857 8.57857 6.25 8 6.25C7.42143 6.25 7 5.82857 7 5.25ZM11.75 4.25C11.1714 4.25 10.75 4.67143 10.75 5.25C10.75 5.82857 11.1714 6.25 11.75 6.25C12.3286 6.25 12.75 5.82857 12.75 5.25C12.75 4.67143 12.3286 4.25 11.75 4.25ZM13.5 5.25C13.5 4.67143 13.9214 4.25 14.5 4.25C15.0786 4.25 15.5 4.67143 15.5 5.25C15.5 5.82857 15.0786 6.25 14.5 6.25C13.9214 6.25 13.5 5.82857 13.5 5.25ZM2.5 7.25C1.83696 7.25 1.25 7.67143 1.25 8.25C1.25 8.82857 1.83696 9.25 2.5 9.25C3.16304 9.25 3.75 8.82857 3.75 8.25C3.75 7.67143 3.16304 7.25 2.5 7.25ZM4.25 8.25C4.25 7.67143 4.67143 7.25 5.25 7.25C5.82857 7.25 6.25 7.67143 6.25 8.25C6.25 8.82857 5.82857 9.25 5.25 9.25C4.67143 9.25 4.25 8.82857 4.25 8.25ZM8 7.25C7.42143 7.25 7 7.67143 7 8.25C7 8.82857 7.42143 9.25 8 9.25C8.57857 9.25 9 8.82857 9 8.25C9 7.67143 8.57857 7.25 8 7.25ZM10.75 8.25C10.75 7.67143 11.1714 7.25 11.75 7.25C12.3286 7.25 12.75 7.67143 12.75 8.25C12.75 8.82857 12.3286 9.25 11.75 9.25C11.1714 9.25 10.75 8.82857 10.75 8.25ZM14.5 7.25C13.9214 7.25 13.5 7.67143 13.5 8.25C13.5 8.82857 13.9214 9.25 14.5 9.25C15.0786 9.25 15.5 8.82857 15.5 8.25C15.5 7.67143 15.0786 7.25 14.5 7.25Z" fill="currentColor"/>
-        </svg>
-        Sponsor on GitHub
-    </a>
-</div>
-
         </header>
         <main>
-            <div class="sidebar">
-                <div id="error-container" class="error-message"></div>
-                <form 
-                    hx-post="/scrape" 
-                    hx-target="#job-table tbody" 
-                    hx-swap="beforeend"
-                    hx-indicator="#spinner"
-                    hx-on::before-request="document.getElementById('error-container').innerHTML = ''"
-                    hx-on::after-request="if(!event.detail.successful) document.getElementById('error-container').innerHTML = event.detail.xhr.responseText"
-                >
-                    
-                    <fieldset>
-                        <legend>Job Details</legend>
-                        <div class="form-group">
-                            <label for="name">Job Name:</label>
-                            <input type="text" id="name" name="name" value="{{.Name}}">
+            <aside class="sidebar">
+                <div class="form-intro"><p class="eyebrow">New collection</p><h1>Build your search</h1><p>Choose a preset, add searches, and watch verified rows arrive.</p></div>
+                <div id="error-container" class="error-message" role="alert"></div>
+                <form hx-post="/scrape" hx-target="#job-table tbody" hx-swap="beforeend" hx-indicator="#spinner" hx-on::before-request="document.getElementById('error-container').innerHTML = ''" hx-on::after-request="if(!event.detail.successful) document.getElementById('error-container').innerHTML = event.detail.xhr.responseText">
+                    <fieldset class="form-section">
+                        <legend>Search details</legend>
+                        <div class="form-group preset-group">
+                            <label for="run-mode">Run preset <span class="recommended">Recommended</span></label>
+                            <select id="run-mode" name="run_mode">
+                                <option value="auto" selected>Auto complete · until finished</option>
+                                <option value="quick">Quick scan · 15 minutes</option>
+                                <option value="balanced">Balanced · 1 hour</option>
+                                <option value="deep">Deep collection · 3 hours</option>
+                                <option value="custom">Custom controls</option>
+                            </select>
+                            <div id="preset-summary" class="preset-summary" aria-live="polite">
+                                <strong>Auto complete</strong>
+                                <span>No clock cutoff · full result feed · email discovery · stops when all discovered work is finished.</span>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="keywords">Keywords:</label>
-                            <textarea id="keywords" name="keywords" rows="10">{{ .KeywordsString }}</textarea>
-                        </div>
-                        <div class="form-group">
-                            <label for="lang">Language:</label>
-                            <input type="text" id="lang" name="lang" value="{{.Language}}">
-                        </div>
+                        <div class="form-group"><label for="name">Job name</label><input type="text" id="name" name="name" value="{{.Name}}" placeholder="e.g. Eastern Cape dentists"><p class="field-hint">A private label for the export and monitor.</p></div>
+                        <div class="form-group"><label for="keywords">Searches <span class="required">Required</span></label><textarea id="keywords" name="keywords" rows="4" placeholder="dentists in East London&#10;orthodontists in Gqeberha">{{.KeywordsString}}</textarea><p class="field-hint">One Google Maps search per line, e.g. <code>dentists in East London</code>.</p></div>
+                        <div class="form-group"><label for="lang">Language <span class="required">Required</span></label><input type="text" id="lang" name="lang" value="{{.Language}}" maxlength="2" placeholder="en"><p class="field-hint">Two-letter code: <code>en</code>, <code>af</code>, or <code>de</code>.</p></div>
                     </fieldset>
-                    
-                    <details class="expandable-section">
-                        <summary>Location Settings</summary>
-                        <fieldset>
-                            <div class="form-group">
-                                <label for="zoom">Zoom:</label>
-                                <input type="number" id="zoom" name="zoom" value="{{.Zoom}}">
-                            </div>
-                            <div class="form-group">
-                                <label for="latitude">Latitude:</label>
-                                <input type="number" step="0.000000000000001" id="latitude" name="latitude" value="{{.Lat}}">
-                            </div>
-                            <div class="form-group">
-                                <label for="longitude">Longitude:</label>
-                                <input type="number" step="0.000000000000001" id="longitude" name="longitude" value="{{.Lon}}">
-                            </div>
-                        </fieldset>
-                    </details>
-                    
-                    <details class="expandable-section">
-                        <summary>Advanced Options</summary>
-                        <fieldset>
-                            <div class="form-group">
-                                <label for="fastmode">Fast Mode (BETA):</label>
-                                <input type="checkbox" id="fastmode" name="fastmode" {{if .FastMode}}checked{{end}}>
-                            </div>
-                            <div class="form-group">
-                                    <label for="radius">Radius (BETA):</label>
-                                    <input type="number" id="radius" name="radius" value="{{.Radius}}">
-                            </div>
-                            <div class="form-group">
-                                <label for="depth">Depth:</label>
-                                <input type="number" step="1" id="depth" name="depth" value="{{.Depth}}">
-                            </div>
-                            <div class="form-group checkbox">
-                                <input type="checkbox" id="email" name="email" {{if .Email}}checked{{end}}>
-                                <label for="email">Fetch Emails</label>
-                            </div>
-                            <div class="form-group">
-                                <label for="maxtime">Max job time:</label>
-                                <input type="text" id="maxtime" name="maxtime" value="{{.MaxTime}}">
-                            </div>
-                        </fieldset>
-                    </details>
-                    <details class="expandable-section">
-                        <summary>Proxies</summary>
-                        <fieldset>
-                            <div class="form-group">
-                                <label for="proxies">Proxies:(one per line)</label>
-                                <p class="text-muted"><small>Examples:<br>
-                                        <p>HTTPS proxy with username/password: https://username:password@myproxy.local:443<p>
-                                        <p>HTTP proxy with username/password: http://username:password@myproxy.local:443<p>
-                                        <p>SOCKS5 proxy without auth: socks5://127.0.0.1:8000</p>
-                                </p>
-
-                                <textarea id="proxies" name="proxies" rows="5">{{.ProxiesString}}</textarea>
-                            </div>
-                        </fieldset>
-                    </details>
-                    
-                    <button type="submit">Start Scraping</button>
+                    <details class="expandable-section"><summary><span>Location settings</span><span class="summary-note">Optional</span></summary><fieldset class="details-content">
+                        <div class="form-group"><label for="zoom">Zoom level</label><input type="number" id="zoom" name="zoom" min="1" max="21" value="{{.Zoom}}"><p class="field-hint">Use <code>15</code> for most city searches.</p></div>
+                        <div class="form-group"><label for="latitude">Latitude</label><input type="number" step="any" id="latitude" name="latitude" value="{{.Lat}}"><p class="field-hint">Fast Mode only, e.g. <code>-33.0153</code>.</p></div>
+                        <div class="form-group"><label for="longitude">Longitude</label><input type="number" step="any" id="longitude" name="longitude" value="{{.Lon}}"><p class="field-hint">Fast Mode only, e.g. <code>27.9116</code>.</p></div>
+                        <div class="form-group"><label for="radius">Radius (metres)</label><input type="number" id="radius" name="radius" min="1" value="{{.Radius}}"><p class="field-hint">Fast Mode search radius, e.g. <code>5000</code>.</p></div>
+                    </fieldset></details>
+                    <details class="expandable-section" id="advanced-settings"><summary><span>Collection settings</span><span class="summary-note">Preset managed</span></summary><fieldset class="details-content">
+                        <label class="toggle-row preset-controlled" for="fastmode"><input type="checkbox" id="fastmode" name="fastmode" {{if .FastMode}}checked{{end}}><span><strong>Fast Mode</strong><small>Basic results around coordinates; disabled by Auto.</small></span></label>
+                        <div class="form-group preset-controlled"><label for="depth">Scroll depth</label><input type="number" id="depth" name="depth" min="0" value="{{.Depth}}"><p class="field-hint">Auto uses <code>0</code> to continue until the feed ends.</p></div>
+                        <label class="toggle-row preset-controlled" for="email"><input type="checkbox" id="email" name="email" {{if .Email}}checked{{end}}><span><strong>Find emails</strong><small>Visits public business websites; enabled by Auto.</small></span></label>
+                        <label class="toggle-row preset-controlled" for="extra-reviews"><input type="checkbox" id="extra-reviews" name="extra_reviews"><span><strong>Extra reviews</strong><small>More detail with a longer run; enabled by Deep.</small></span></label>
+                        <div class="form-group preset-controlled"><label for="maxtime">Maximum time</label><input type="text" id="maxtime" name="maxtime" value="{{.MaxTime}}" placeholder="1h"><p class="field-hint">Custom mode only. Minimum <code>3m</code>.</p></div>
+                    </fieldset></details>
+                    <details class="expandable-section"><summary><span>Proxies</span><span class="summary-note">Optional</span></summary><fieldset class="details-content single-column"><div class="form-group"><label for="proxies">Proxy list</label><textarea id="proxies" name="proxies" rows="3" placeholder="http://user:password@proxy.example:8080">{{.ProxiesString}}</textarea><p class="field-hint">One proxy URL per line.</p></div></fieldset></details>
+                    <div class="form-actions"><button class="primary-button" type="submit"><span>Launch collection</span><span aria-hidden="true">→</span></button><button id="reset-form" class="reset-button" type="button">Reset form</button></div>
                 </form>
-            </div>
-            <div class="content">
-                <div id="spinner" class="spinner"></div>
-                <table id="job-table">
-                    <thead>
-                        <tr>
-                            <th>Job ID</th>
-                            <th>Job Name</th>
-                            <th>Job Date</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody hx-get="/jobs" hx-trigger="load, every 10s">
-                        <!-- Job rows will be inserted here by HTMX -->
-                    </tbody>
-                </table>
-            </div>
+            </aside>
+            <section class="content" aria-labelledby="jobs-heading">
+                <div class="content-heading"><div><p class="eyebrow">Realtime activity</p><h2 id="jobs-heading">Collection monitor</h2><p>Progress, ETA, speed, and saved businesses refresh every 2 seconds.</p></div><div class="refresh-state"><span class="live-dot" aria-hidden="true"></span><span>Live</span><div id="spinner" class="spinner" aria-label="Creating job"></div></div></div>
+                <div class="table-card"><table id="job-table" aria-label="Collection jobs"><tbody hx-get="/jobs" hx-trigger="load, every 2s" hx-swap="innerHTML"></tbody></table></div>
+            </section>
         </main>
     </div>
-
     <div id="map-modal-container"></div>
-<script>
-function hideSponsor() {
-    const sponsorSection = document.getElementById('sponsor-section');
-    if (sponsorSection) {
-        sponsorSection.style.display = 'none';
-    }
-}
-</script>
 </body>
 </html>

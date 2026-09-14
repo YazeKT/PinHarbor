@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/YazeKT/PinHarbor/security/advisories/new
+    about: Report security-sensitive problems privately.
+  - name: Usage and recovery guide
+    url: https://github.com/YazeKT/PinHarbor/blob/main/docs/OPERATIONS.md
+    about: Check startup, backup, and recovery instructions first.

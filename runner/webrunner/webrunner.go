@@ -19,7 +19,6 @@ import (
 	"github.com/gosom/google-maps-scraper/web"
 	"github.com/gosom/google-maps-scraper/web/sqlite"
 	"github.com/gosom/scrapemate"
-	"github.com/gosom/scrapemate/adapters/writers/csvwriter"
 	"github.com/gosom/scrapemate/scrapemateapp"
 	"golang.org/x/sync/errgroup"
 )
@@ -90,6 +89,10 @@ func (w *webrunner) Close(context.Context) error {
 }
 
 func (w *webrunner) work(ctx context.Context) error {
+	if err := w.svc.MarkInterruptedJobsFailed(ctx); err != nil {
+		return fmt.Errorf("mark interrupted jobs failed: %w", err)
+	}
+
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
@@ -151,6 +154,13 @@ func (w *webrunner) scrapeJob(ctx context.Context, job *web.Job) error {
 		return w.svc.Update(ctx, job)
 	}
 
+	jobCtx, cancelRunning := context.WithCancel(ctx)
+	finishRunning := w.svc.RegisterRunning(job.ID, cancelRunning)
+	defer func() {
+		cancelRunning()
+		finishRunning()
+	}()
+
 	outpath := filepath.Join(w.cfg.DataFolder, job.ID+".csv")
 
 	outfile, err := os.Create(outpath)
@@ -167,7 +177,7 @@ func (w *webrunner) scrapeJob(ctx context.Context, job *web.Job) error {
 		setupMate = defaultSetupMate(w.cfg)
 	}
 
-	mate, err := setupMate(ctx, outfile, job)
+	mate, err := setupMate(jobCtx, outfile, job)
 	if err != nil {
 		job.Status = web.StatusFailed
 
@@ -219,20 +229,33 @@ func (w *webrunner) scrapeJob(ctx context.Context, job *web.Job) error {
 
 	if len(seedJobs) > 0 {
 		exitMonitor.SetSeedCount(len(seedJobs))
+		runMode := web.EffectiveRunMode(job.Data)
 
-		allowedSeconds := max(60, len(seedJobs)*10*job.Data.Depth/50+120)
-
-		if job.Data.MaxTime > 0 {
-			if job.Data.MaxTime.Seconds() < 180 {
-				allowedSeconds = 180
-			} else {
-				allowedSeconds = int(job.Data.MaxTime.Seconds())
-			}
+		allowedDuration := job.Data.MaxTime
+		if runMode != web.RunModeAuto && allowedDuration < 3*time.Minute {
+			allowedDuration = 3 * time.Minute
 		}
 
-		log.Printf("running job %s with %d seed jobs and %d allowed seconds", job.ID, len(seedJobs), allowedSeconds)
+		w.svc.SetRunningProgress(job.ID, allowedDuration, func() web.WorkSnapshot {
+			stats := exitMonitor.Snapshot()
 
-		mateCtx, cancel := context.WithTimeout(ctx, time.Duration(allowedSeconds)*time.Second)
+			return web.WorkSnapshot{
+				SeedCount:       stats.SeedCount,
+				SeedCompleted:   stats.SeedCompleted,
+				PlacesFound:     stats.PlacesFound,
+				PlacesCompleted: stats.PlacesCompleted,
+			}
+		})
+
+		var mateCtx context.Context
+		var cancel context.CancelFunc
+		if runMode == web.RunModeAuto {
+			log.Printf("running job %s in auto mode with %d searches until completion", job.ID, len(seedJobs))
+			mateCtx, cancel = context.WithCancel(jobCtx)
+		} else {
+			log.Printf("running job %s in %s mode with %d searches and a %s limit", job.ID, runMode, len(seedJobs), allowedDuration)
+			mateCtx, cancel = context.WithTimeout(jobCtx, allowedDuration)
+		}
 		defer cancel()
 
 		exitMonitor.SetCancelFunc(cancel)
@@ -299,7 +322,7 @@ func defaultSetupMate(cfg *runner.Config) func(context.Context, io.Writer, *web.
 
 		log.Printf("job %s has proxy: %v", job.ID, hasProxy)
 
-		csvWriter := csvwriter.NewCsvWriter(csv.NewWriter(writer))
+		csvWriter := newResilientCSVWriter(csv.NewWriter(writer))
 
 		writers := []scrapemate.ResultWriter{csvWriter}
 

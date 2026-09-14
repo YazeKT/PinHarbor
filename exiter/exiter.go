@@ -11,7 +11,17 @@ type Exiter interface {
 	IncrSeedCompleted(int)
 	IncrPlacesFound(int)
 	IncrPlacesCompleted(int)
+	Snapshot() Stats
 	Run(context.Context)
+}
+
+// Stats is a thread-safe snapshot of the scraper's discovered and completed
+// work. The total amount of place work grows as search seeds return results.
+type Stats struct {
+	SeedCount       int
+	SeedCompleted   int
+	PlacesFound     int
+	PlacesCompleted int
 }
 
 type exiter struct {
@@ -78,6 +88,19 @@ func (e *exiter) IncrPlacesCompleted(val int) {
 		case e.doneCh <- struct{}{}:
 		default:
 		}
+	}
+}
+
+// Snapshot returns the current work counters without interrupting the scrape.
+func (e *exiter) Snapshot() Stats {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	return Stats{
+		SeedCount:       e.seedCount,
+		SeedCompleted:   e.seedCompleted,
+		PlacesFound:     e.placesFound,
+		PlacesCompleted: e.placesCompleted,
 	}
 }
 

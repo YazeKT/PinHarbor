@@ -29,3 +29,6 @@ Try these in order:
 ## Crawl is interrupted or fails
 
 Preserve the output directory and stopped container for inspection. Summarize the actionable error without dumping logs. Explain that Release 1 reruns the affected crawl; it does not provide checkpoint-level resume.
+# Legacy upstream recovery
+
+> These Docker recovery notes apply to the retained upstream automation skill, not the supported PinHarbor Windows launcher. See `docs/OPERATIONS.md` for current recovery.

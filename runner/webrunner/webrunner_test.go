@@ -2,7 +2,9 @@
 package webrunner
 
 import (
+	"bytes"
 	"context"
+	"encoding/csv"
 	"io"
 	"testing"
 	"time"
@@ -61,6 +63,43 @@ func TestScrapeJobMarksOKBeforeClosingMate(t *testing.T) {
 		t.Fatalf("scrape job: %v", err)
 	}
 }
+
+func TestWorkMarksInterruptedJobsFailedOnEngineStart(t *testing.T) {
+	repo := &memoryJobRepo{jobs: map[string]web.Job{
+		"old-job": {ID: "old-job", Status: web.StatusWorking},
+	}}
+	w := &webrunner{svc: web.NewService(repo, t.TempDir())}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	if err := w.work(ctx); err != nil {
+		t.Fatalf("work: %v", err)
+	}
+	if got := repo.jobs["old-job"].Status; got != web.StatusFailed {
+		t.Fatalf("interrupted job status = %q, want %q", got, web.StatusFailed)
+	}
+}
+
+func TestResilientCSVWriterSkipsNilResults(t *testing.T) {
+	var output bytes.Buffer
+	csvWriter := newResilientCSVWriter(csv.NewWriter(&output))
+	results := make(chan scrapemate.Result, 2)
+	results <- scrapemate.Result{}
+	results <- scrapemate.Result{Data: csvCapableTestRow{}}
+	close(results)
+
+	if err := csvWriter.Run(context.Background(), results); err != nil {
+		t.Fatalf("write results: %v", err)
+	}
+	if got := output.String(); got != "name\nvalue\n" {
+		t.Fatalf("csv output = %q", got)
+	}
+}
+
+type csvCapableTestRow struct{}
+
+func (csvCapableTestRow) CsvHeaders() []string { return []string{"name"} }
+func (csvCapableTestRow) CsvRow() []string     { return []string{"value"} }
 
 type fakeMate struct {
 	onClose func()

@@ -1,10 +1,31 @@
 openapi: 3.0.3
 info:
-  title: Google Maps Scraper API
-  version: 1.0.0
-  description: API for managing job google maps scraping tasks
+  title: PinHarbor Local API
+  version: 2.0.0
+  description: Local API for PinHarbor collection jobs and CSV exports.
 
 paths:
+  /health:
+    get:
+      summary: Check local PinHarbor readiness
+      responses:
+        '200':
+          description: PinHarbor is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  app:
+                    type: string
+                    example: PinHarbor
+                  status:
+                    type: string
+                    example: ok
+                  time:
+                    type: string
+                    format: date-time
+
   /api/v1/jobs:
     post:
       summary: Create a new job scraping task
@@ -14,12 +35,12 @@ paths:
             curl -X POST "http://localhost:8080/api/v1/jobs" \
               -H "Content-Type: application/json" \
               -d '{
-                "name": "Coffee shops Ilion",
-                "keywords": ["coffee in ilion"],
-                "lang": "el",
+                "name": "Eastern Cape dentists",
+                "run_mode": "auto",
+                "keywords": ["dentists in East London"],
+                "lang": "en",
                 "zoom": 15,
-                "depth": 1,
-                "max_time": 3600
+                "radius": 10000
               }'
       requestBody:
         required: true
@@ -157,6 +178,27 @@ paths:
         '500':
           description: Internal server error
 
+  /api/v1/jobs/{id}/stop:
+    post:
+      summary: Stop a job and preserve its partial CSV
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job stopped, or already in a terminal state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '422':
+          description: Invalid ID
+        '500':
+          description: Stop failed
+
 components:
   schemas:
     ApiError:
@@ -176,6 +218,10 @@ components:
           type: array
           items:
             type: string
+        run_mode:
+          type: string
+          enum: [auto, quick, balanced, deep, custom]
+          default: auto
         lang:
           type: string
         zoom:
@@ -191,6 +237,8 @@ components:
         depth:
           type: integer
         email:
+          type: boolean
+        extra_reviews:
           type: boolean
         max_time:
           type: integer
@@ -217,6 +265,7 @@ components:
           format: date-time
         status:
           type: string
+          enum: [pending, working, ok, failed, stopped]
         data:
           $ref: '#/components/schemas/JobData'
 
@@ -227,6 +276,9 @@ components:
           type: array
           items:
             type: string
+        run_mode:
+          type: string
+          enum: [auto, quick, balanced, deep, custom]
         lang:
           type: string
         zoom:
@@ -242,6 +294,8 @@ components:
         depth:
           type: integer
         email:
+          type: boolean
+        extra_reviews:
           type: boolean
         max_time:
           type: integer

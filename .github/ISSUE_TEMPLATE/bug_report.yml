@@ -1,0 +1,51 @@
+name: Bug report
+description: Report a reproducible PinHarbor problem.
+title: "[Bug]: "
+labels: [bug, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve PinHarbor. Remove private searches, business data, emails, proxy credentials, and local paths before submitting.
+  - type: input
+    id: version
+    attributes:
+      label: PinHarbor commit or version
+      placeholder: e.g. main at abc1234
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: Windows version and output of go version
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Include expected behavior and the exact safe error text.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start with Run PinHarbor.bat
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: checks
+    attributes:
+      label: Checks already tried
+      description: Include relevant health-check or test results. Never delete webdata as a troubleshooting step.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed credentials, personal data, search terms, exports, and private local paths.
+          required: true

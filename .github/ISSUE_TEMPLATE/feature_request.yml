@@ -1,0 +1,40 @@
+name: Feature request
+description: Suggest a focused improvement to the local PinHarbor workflow.
+title: "[Feature]: "
+labels: [enhancement, needs-triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What is difficult today, and who encounters it?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed improvement
+      description: Describe the desired behavior rather than only the visual treatment.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Windows launcher
+        - Collection behavior
+        - Realtime monitor
+        - CSV export
+        - Local API
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: contracts
+    attributes:
+      label: Product fit
+      options:
+        - label: This keeps PinHarbor local-first and single-operator.
+        - label: This can preserve existing jobs, exports, routes, and the CSV contract.

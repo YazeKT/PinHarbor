@@ -1,5 +1,7 @@
 # TalorData: Fast SERP API for Google Maps and Search Data
 
+> Upstream sponsor reference; not a PinHarbor dependency or feature.
+
 [TalorData](https://talordata.com/?campaignid=f01u8cHondg2qA47&utm_source=github&utm_term=googlemaps) provides real-time SERP data APIs for teams that need clean, structured search results without maintaining scraping infrastructure.
 
 Use one API to collect search data from Google, Bing, Yandex, and DuckDuckGo, with standardized JSON / HTML responses, global localization, automatic request handling, and flexible pricing that only charges for successful requests.

@@ -351,9 +351,9 @@ func AppendBrowserCapacityOptions(opts []func(*scrapemateapp.Config) error, cfg 
 }
 
 func Banner() {
-	message1 := "🌍 Google Maps Scraper"
-	message2 := "⭐ If you find this project useful, please star it on GitHub: https://github.com/gosom/google-maps-scraper"
-	message3 := "💖 Consider sponsoring to support development: https://github.com/sponsors/gosom"
+	message1 := "⚓ PinHarbor · Local lead discovery"
+	message2 := "Local web app: http://localhost:8080"
+	message3 := "Built on the open-source gosom/google-maps-scraper engine"
 
 	fmt.Fprintln(os.Stderr, banner([]string{message1, message2, message3}, 0))
 }

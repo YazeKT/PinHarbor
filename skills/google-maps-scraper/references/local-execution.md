@@ -38,3 +38,6 @@ For JSON, point to `results.json` and use `--format json`. The helper returns JS
 After validation succeeds, run the complete query file with a descriptive output directory and add `--skip-image-pull`; validation already checked the image during this workflow. The helper safely removes only a stopped container named `gmaps-scraper-agent`; it refuses to replace a running crawl.
 
 Do not use `--dry-run` for an actual crawl. `--dry-run` exists for diagnostics and prints a command containing the proxy file path, never its contents.
+# Legacy upstream execution
+
+> PinHarbor uses the direct Go launcher on Windows. The Docker instructions below are retained only for the original upstream automation skill.

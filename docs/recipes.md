@@ -1,4 +1,6 @@
-# Google Maps Scraper Recipes
+# PinHarbor advanced recipes
+
+> The PinHarbor web interface and Auto Mode are the supported default. The CLI/Docker examples below are retained as upstream advanced reference and may not match the local Windows launcher.
 
 Common workflows for lead generation, research, and developer automation.
 
