@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/lambda v1.88.5
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.97.3
 	github.com/digitalocean/godo v1.173.0
-	github.com/go-chi/chi/v5 v5.2.4
+	github.com/go-chi/chi/v5 v5.4.0
 	github.com/golangci/golangci-lint v1.64.8
 	github.com/google/open-location-code/go v0.0.0-20250415120251-fa6d7f9d4765
 	github.com/google/uuid v1.6.0
@@ -39,6 +39,7 @@ require (
 	golang.org/x/crypto v0.53.0
 	golang.org/x/sync v0.21.0
 	golang.org/x/term v0.44.0
+	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.37.0
 	riverqueue.com/riverui v0.14.0
 )
@@ -303,7 +304,6 @@ require (
 	google.golang.org/protobuf v1.36.8 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	honnef.co/go/tools v0.6.1 // indirect
 	modernc.org/libc v1.65.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
